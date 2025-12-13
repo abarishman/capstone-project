@@ -4,6 +4,12 @@ import pandas as pd
 import numpy as np
 import random
 import time
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.metrics import mean_absolute_error
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.optimizers import Adam
 
 # opening message on streamlit page, introduces goal for building Dungeons & Dragons (D&D) character
 st.write("""
@@ -107,19 +113,117 @@ if st.button('Roll :game_die:'):
             st.write("""**Ability Scores**""")
             st.dataframe(df_character_ability, hide_index=True)
 
-            col3, col4 = st.columns(2)
+            with st.container():
+                col3, col4 = st.columns(2)
 
-            with col3:
-                st.write("""Ability Modifiers""")
-                df_character_ability['Modifier'] = (df_character_ability['Score']-10)//2
-                st.dataframe(df_character_ability[['Ability', 'Modifier']], hide_index=True)
+                with col3:
+                    st.write("""Ability Modifiers""")
+                    df_character_ability['Modifier'] = (df_character_ability['Score']-10)//2
+                    st.dataframe(df_character_ability[['Ability', 'Modifier']], hide_index=True)
 
-            with col4:
-                st.write("""Saving Throw Modifiers""")
-                df_character_save=df_character_class.drop('Class', axis=1)
-                df_character_save=df_character_save.T
-                df_character_save = df_character_save.reset_index()
-                df_character_save.columns = ['Ability', 'Prof']
-                df_character_ability['SaveProf']=df_character_save['Prof']
-                df_character_ability['Save'] = (df_character_ability['Modifier']+df_character_ability['SaveProf'])
-                st.dataframe(df_character_ability[['Ability', 'Save']], hide_index=True)
+                with col4:
+                    st.write("""Saving Throw Modifiers""")
+                    df_character_save=df_character_class.drop('Class', axis=1)
+                    df_character_save=df_character_save.T
+                    df_character_save = df_character_save.reset_index()
+                    df_character_save.columns = ['Ability', 'Prof']
+                    df_character_ability['SaveProf']=df_character_save['Prof']
+                    df_character_ability['Save'] = (df_character_ability['Modifier']+df_character_ability['SaveProf'])
+                    st.dataframe(df_character_ability[['Ability', 'Save']], hide_index=True)
+
+            
+# creating a predictive model for D&D character stats based on the selection of race and class
+# add a predictive aspect to the app and see what expected outputs may be
+
+                abilities = ['Strength', 'Dexterity', 'Constitution','Intelligence', 'Wisdom', 'Charisma']
+
+                def roll_ability_score():
+                    rolls = [random.randint(1, 6) for _ in range(4)]
+                    rolls.sort()
+                    return sum(rolls[1:])
+
+                def generate_training_data(n_samples=1000):
+                    rows = []
+
+                    for _ in range(n_samples):
+                        race_row = df_race.sample(1).iloc[0]
+                        class_row = df_class.sample(1).iloc[0]
+                        base_stats = {a: roll_ability_score() for a in abilities}
+                        final_stats = {
+                            a: base_stats[a] + race_row[a]
+                            for a in abilities
+                        }
+                        rows.append({
+                            'Race': race_row['Race'],
+                            'Class': class_row['Class'],
+                            **final_stats
+                        })
+
+                    return pd.DataFrame(rows)
+
+                df_training_data = generate_training_data()
+
+                X = df_training_data[['Race', 'Class']]
+                y = df_training_data[abilities]
+
+                encoder = OneHotEncoder(sparse_output=False)
+                X_encoded = encoder.fit_transform(X)
+
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X_encoded, y, test_size=0.2, random_state=42)
+                model = Sequential([
+                    Dense(32, activation='relu', input_shape=(X_train.shape[1],)),
+                    Dense(32, activation='relu'),
+                    Dense(6)])
+                model.compile(
+                    optimizer=Adam(learning_rate=0.001),
+                    loss='mse')
+                model.fit(
+                    X_train,
+                    y_train,
+                    epochs=40,
+                    batch_size=32)
+
+                predictions = model.predict(X_test)
+                mae = mean_absolute_error(y_test, predictions)
+
+                example = pd.DataFrame(
+                    [[race, clss]],
+                    columns=['Race', 'Class']
+                )
+
+                example_encoded = encoder.transform(example)
+                predicted_stats = model.predict(example_encoded)[0]
+
+                st.write("## Example Neural Network Prediction")
+
+                example_character = pd.DataFrame(
+                    [[race, clss]],
+                    columns=['Race', 'Class'])
+
+                if race != 'None Selected' and clss != 'None Selected':
+
+                    example_encoded = encoder.transform(example_character)
+                    predicted_stats = model.predict(example_encoded)[0]
+
+                    df_prediction = pd.DataFrame({
+                        'Ability': abilities,
+                        'Predicted Score (Average)': np.round(predicted_stats, 1)})
+
+                    st.write(
+                        f"Predicted average ability scores for a {race} {clss}:")
+                    st.dataframe(df_prediction, hide_index=True)
+
+                else:
+                    st.spinner("Waiting for selection...")
+
+                st.write('### *Model Accuracy*')
+
+                # Make predictions on test data
+                predictions = model.predict(X_test)
+
+                # Compute MAE
+                mae = mean_absolute_error(y_test, predictions)
+
+                st.write(
+                    f"*Mean Absolute Error:* {mae:.2f} points")
