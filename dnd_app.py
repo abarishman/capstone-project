@@ -1,3 +1,7 @@
+# Name: Alexandra Barishman    Course: EN.585.771.81.FA25
+
+
+
 # import modules and components needed
 import streamlit as st
 import pandas as pd
@@ -189,8 +193,7 @@ if st.button('Roll :game_die:'):
 
                 example = pd.DataFrame(
                     [[race, clss]],
-                    columns=['Race', 'Class']
-                )
+                    columns=['Race', 'Class'])
 
                 example_encoded = encoder.transform(example)
                 predicted_stats = model.predict(example_encoded)[0]
