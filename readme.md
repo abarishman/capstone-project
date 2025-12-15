@@ -4,7 +4,6 @@
 
 A Streamlit application that helps users with the creation of a 1st-level D&D character. The app combines the traditional tabletop game mechanics with machine learning to both generate and predict character ability scores based on race and class selection by the user.
 
----
 
 ## Overview
 
@@ -43,3 +42,7 @@ This app allows players to:
 
 7. **Check Model Accuracy**
    - The Mean Absolute Error (MAE) indicates the model’s average prediction error.
+
+
+   ## Link to Presentation
+   https://github.com/abarishman/capstone-project/blob/e586b1a2af709469f20e5101f91147f3b7c6f238/Barishman_CapstoneProjectRecording.mp4
