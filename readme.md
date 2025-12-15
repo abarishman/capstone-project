@@ -1,4 +1,5 @@
 # Dungeons & Dragons Character Stat Builder
+*by Alexandra Barishman*
 
 A Streamlit application that helps users with the creation of a 1st-level D&D character. The app combines the traditional tabletop game mechanics with machine learning to both generate and predict character ability scores based on race and class selection by the user.
 
